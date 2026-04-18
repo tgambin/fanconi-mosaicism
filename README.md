@@ -35,50 +35,44 @@ per-position pileup validation). **Stage 2 (local)** runs in Python on
 the small Stage-1 CSV outputs and performs classification, statistical
 tests, manual IGV review integration and report generation.
 
-```
-                                                                            ┌─── STAGE 1 (Terra/Cromwell, WDL) ───────────────────────────┐
-  raw proband BAM  ──► DownsampleProband.wdl ──► 150x proband BAM ──┬──► HaplotypeCallerScatter.wdl ───┐
-                                                                   │                                     │
-  parental BAMs  ────────────────────────────────────────────────────┼──► HaplotypeCallerScatter.wdl ───┤
-                                                                   │    (parents, ploidy=2)             │
-                                                                   │                                     │
-                                                                   └──► Mutect2TumorOnlyScatter.wdl     │
-                                                                        (proband, tumour-only)          │
-                                                                                                         │
-                                                                        ┌────────────────────────────────┘
-                                                                        │
-           MosaicPostProcessPart1.wdl (HC)  ◄─────────────────────────┤   trio VCFs +
-           MutectPostProcessPart1.wdl  (Mutect2) ◄─────────────────────┘   slice BAMs
-              │  trio de novo filter (bcftools isec -C)
-              │  canonical chr + DP pre-filter
-              │  segdup / LCR region masking
-              │  per-position pileup (samtools mpileup)
-              ▼
-           Part 1 CSV ──────────────────────────────────────────────┐
-                                                                      │
-                            ┌──── STAGE 2 (local, Python) ────────────┘
-                            │
-                            ▼
-        mosaic_postprocess_part2.py
-          │  hard filters (MQ, QD, FS, ReadPosRankSum)
-          │  centromere / repeat / chrY exclusion
-          │  gnomAD AF=0 annotation via VEP
-          │  VAF classification + deepSNV LRT (Gerstung 2014)
-          ▼
-        binomial_het_test.py        ──►  depth-aware mosaic / het classifier
-          │                               (binomtest H₀:VAF=0.5, BH < 0.05)
-          ▼
-        IGVTrio.wdl  ──►  trio screenshots  ──►  manual TRUE/FALSE scoring
-                                                         │
-                                                         ▼
-        apply_igv_validation.py      ──►  PASS_all_igv_confirmed
-          │
-          ▼
-        generate_all_outputs.py      ──►  per-trio burden test vs control
-                                          ──►  sensitivity_alt_threshold.py
-                                          ──►  cross_caller_comparison.py
-                                          ──►  vaf_histograms.py
-                                          ──►  final report + CSV tables
+```mermaid
+flowchart TD
+    RAW["raw proband BAM<br/>+ parental BAMs"]:::input
+
+    subgraph S1["Stage 1 · Terra / Cromwell (WDL)"]
+        direction TB
+        DS["DownsampleProband.wdl<br/>proband → 150x"]
+        HC["HaplotypeCallerScatter.wdl<br/>proband + parents · ploidy=2"]
+        M2["Mutect2TumorOnlyScatter.wdl<br/>proband · tumour-only"]
+        P1["MosaicPostProcessPart1.wdl<br/>MutectPostProcessPart1.wdl<br/>trio de novo · per-position pileup"]
+    end
+
+    P1CSV[("Part 1 CSV<br/>per trio × caller")]:::artefact
+
+    subgraph S2["Stage 2 · local (Python)"]
+        direction TB
+        P2["mosaic_postprocess_part2.py<br/>hard filters · gnomAD AF=0 · deepSNV LRT"]
+        BIN["binomial_het_test.py<br/>mosaic / het classifier<br/>(H₀:VAF=0.5, BH<0.05)"]
+        IGV["IGVTrio.wdl + apply_igv_validation.py<br/>manual TRUE/FALSE · error codes p1–p6"]
+        STATS["generate_all_outputs.py<br/>burden test · sensitivity · cross-caller · histograms"]
+    end
+
+    REPORT[("report.md<br/>+ supplementary CSV tables")]:::artefact
+
+    RAW --> DS
+    DS --> HC
+    DS --> M2
+    HC --> P1
+    M2 --> P1
+    P1 --> P1CSV
+    P1CSV --> P2
+    P2 --> BIN
+    BIN --> IGV
+    IGV --> STATS
+    STATS --> REPORT
+
+    classDef input fill:#e8f4fd,stroke:#4a90d9,color:#1a3a5c
+    classDef artefact fill:#fff4e0,stroke:#d49a2e,color:#6b4a10
 ```
 
 ## Analysis steps
