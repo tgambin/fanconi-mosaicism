@@ -1,0 +1,68 @@
+# Cromwell Executions
+cromwell-executions/
+cromwell-workflow-logs/
+cromwell-*.jar
+
+# Large Data & References
+# Ignore everything in data/ by default
+data/*
+# Exceptions for metadata and small annotations
+!data/metadata/
+!data/annotations/
+!data/giab_benchmark/
+!data/README.md
+
+# Large Reference Files even in allowed dirs
+*.fasta
+*.fa
+*.2bit
+*.dict
+*.fai
+
+# Large Alignments & Variants
+*.bam
+*.bai
+*.cram
+*.crai
+*.vcf
+*.vcf.gz
+*.vcf.gz.tbi
+
+# Output Directories
+outputs/*
+# Always tracked (small files)
+!outputs/README.md
+!outputs/benchmark/
+!outputs/coverage/
+!outputs/part1_reports/
+!outputs/cross_caller/
+!outputs/candidates/
+!outputs/part1_csv/
+!outputs/part2/
+!outputs/igv_review/
+!outputs/sensitivity/
+# Note: large files tracked via Git LFS (see .gitattributes):
+#   outputs/part1_csv/*.csv, outputs/part2/*_part2_all.tsv
+
+# Archives
+*.tar.gz
+*.zip
+!outputs/igv_review/*.tar.gz
+
+# Secrets & Local Config
+inputs/local.json
+.gemini/
+
+# System
+.DS_Store
+__pycache__/
+*.pyc
+
+# Docker
+docker_cid
+
+# Temporary
+tmp/
+logs/
+data/legacy/
+outputs/igv_review/.~lock.*
